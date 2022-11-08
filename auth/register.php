@@ -1,0 +1,154 @@
+<?php
+session_start();
+
+if (isset($_SESSION['username'])) {
+    header("Location: ../index.php");
+}
+
+include '../connection.php';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
+    </script>
+    <link rel="stylesheet" href="../index.css">
+    <link rel="icon" href="../favicon.ico">
+    <title>Register</title>
+</head>
+
+<body>
+    <main class="center-vertical-horizontal">
+        <?php
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+ 
+            if (empty($_POST['email']) || empty($_POST['password']) || empty($_POST['password_confirmation']) || empty($_POST['username'])) {
+                $error = 'Please fill in all the fields';
+                echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+            } else {
+
+                if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
+                    $error = 'Please enter a valid email';
+                    echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                } else {
+           
+                    $sql = "SELECT * FROM Users WHERE username = '" . $_POST['username'] . "'";
+                    $result = mysqli_query($conn, $sql);
+
+                    if (!$result) {
+                        $error = 'Error: ' . mysqli_error($conn);
+                        echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                    } else {
+                        if (mysqli_num_rows($result) > 0) {
+   
+                            $error = 'Username already exists';
+                            echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                        } else {
+
+                            $sql = "SELECT * FROM Users WHERE email = '" . $_POST['email'] . "'";
+                            $result = mysqli_query($conn, $sql);
+                            if (!$result) {
+                                $error = 'Error: ' . mysqli_error($conn);
+                                echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                            } else {
+                                if (mysqli_num_rows($result) > 0) {
+
+                                    $error = 'Email already exists';
+                                    echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                                } else {
+                
+                                    $username = strip_tags($_POST['username']);
+                                    $email = strip_tags($_POST['email']);
+                                    $password = strip_tags($_POST['password']);
+
+                                    $username = mysqli_real_escape_string($conn, $username);
+                                    $email = mysqli_real_escape_string($conn, $email);
+                                    $password = mysqli_real_escape_string($conn, $password);
+
+                                    // надежнее чем md5()
+                                    $password = password_hash($password, PASSWORD_DEFAULT);
+
+                                    $sql = "INSERT INTO Users (username, email, password) VALUES ('" . $_POST['username'] . "', '" . $_POST['email'] . "', '" . $password . "')";
+                                    $result = mysqli_query($conn, $sql);
+                                    if (!$result) {
+                                        $error = 'Error: ' . mysqli_error($conn);
+                                        echo '<div class="alert alert-danger" role="alert">' . $error . '</div>';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!isset($error)) {
+                echo '<script>alert("Registration successful! You can now log in to your account");window.location.href="./login.php";</script>';
+            }
+        }
+        ?>
+        <div class="container">
+            <div class="row bg-white">
+                <div class="panel panel-default" style="padding: 12px;">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Register</h3>
+                        <figcaption class="blockquote-footer" style="margin-top: 3px;">
+                            Already have an account? <a href="login.php">Login</a>
+                        </figcaption>
+                    </div>
+                    <div class="panel-body">
+                        <form action="" method="post" onsubmit="return checkPassword()">
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" class="form-control" name="email" id="email" placeholder="Email"
+                                    inlength="3" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$"
+                                    title="Please enter a valid email address" autocomplete="off" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input type="password" class="form-control" name="password" id="password"
+                                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                                    title="Password must containt lowercase, uppercase, number, and minimal of 8 characters"
+                                    placeholder="Password" min="8" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password_confirmation">Password Confirmation</label>
+                                <input type="password" class="form-control" name="password_confirmation"
+                                    id="password_confirmation" placeholder="Password Confirmation" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" class="form-control" name="username" id="username"
+                                    placeholder="username" required>
+                            </div>
+                            <div class="d-flex justify-content-center">
+                                <button type="submit" class="btn btn-primary center"
+                                    style="margin-top: 10px; ">Register</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+        function checkPassword() {
+            var password = document.getElementById('password');
+            var password_confirmation = document.getElementById('password_confirmation');
+            if (password.value != password_confirmation.value) {
+                alert('Password is not the same with confirmation');
+                return false;
+            }
+            return true;
+        }
+        </script>
+    </main>
+
+</body>
+
+</html>
